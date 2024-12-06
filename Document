@@ -1,0 +1,65 @@
+Retrieving AWS Secret from AWS Secrets Manager using PowerShell 
+
+
+
+1. Set Security Protocol
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+1. Install NuGet Provider
+    Check if the NuGet provider is installed, ans install if it is not.
+
+if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+    Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
+}
+
+1. Configure Powershell Gallery Repository
+    Verifies if the PSGallery repository exists and sets the installation policy to Trusted.
+
+$psGallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
+if ($null -eq $psGallery) {
+    Write-Host "PSGallery repository does not exist. Adding PSGallery repository."
+    Register-PSRepository -Name PSGallery -SourceLocation "https://www.powershellgallery.com/api/v2" -InstallationPolicy Trusted
+} else {
+    Write-Host "PSGallery repository exists. Setting installation policy to Trusted."
+    Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+}
+
+1. Install necessary AWS Powershell modules
+
+Install-Module -Name AWS.Tools.Installer -AllowClobber
+Install-Module -Name AWS.Tools.SecretsManager -AllowClobber
+Import-Module -Name AWS.Tools.SecretsManager
+Install-Module -Name AWS.Tools.SecurityToken -AllowClobber
+Import-Module -Name AWS.Tools.SecurityToken
+
+1. Set AWS Credentials
+    Read the credentials from a file and sets them for the session.
+
+$credentialsPath = "E:\Codedeploy\credentials"
+# Read the credentials file
+$credentials = Get-Content $credentialsPath
+# Extract the AWS credentials from the file
+$awsAccessKeyId = ($credentials | Select-String -Pattern "aws_access_key_id").ToString().Split("=")[1].Trim()
+$awsSecretAccessKey = ($credentials | Select-String -Pattern "aws_secret_access_key").ToString().Split("=")[1].Trim()
+$awsSessionToken = ($credentials | Select-String -Pattern "aws_session_token").ToString().Split("=")[1].Trim()
+# Set the AWS credentials
+Set-AWSCredential -AccessKey $awsAccessKeyId -SecretKey $awsSecretAccessKey -SessionToken $awsSessionToken
+
+1. Retrieve Secret Value
+    Retrieve the secret value from AWS Secrets Manager and stores it in a JSON file.
+
+Get-SECSecretValue -SecretId SCAD-Web-Servers-User-Credentials -Region us-west-2 -Select SecretString > E:\Temp\credentials_output.json
+
+
+* Modify the paths ‘$credentialsPath’ and output file path as per your environment Setup
+
+
+
+
+
+
+
+
+
+
